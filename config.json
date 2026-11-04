@@ -1,0 +1,5 @@
+﻿{
+    "ap-south-1":  "arn:aws:lambda:ap-south-1:714437051269:function:carbon-worker",
+    "us-east-1":  "arn:aws:lambda:us-east-1:714437051269:function:carbon-worker",
+    "eu-north-1":  "arn:aws:lambda:eu-north-1:714437051269:function:carbon-worker"
+}
