@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Carbon Scheduler - Worker Lambda
+
+Resources:
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: carbon-worker
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      MemorySize: 128
+      Timeout: 10
+      CodeUri: .
+      LoggingConfig:
+        LogFormat: Text
+      Environment:
+        Variables:
+          PLACEHOLDER: "1"
+
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/carbon-worker
+      RetentionInDays: 1
+
+Outputs:
+  WorkerFunctionArn:
+    Value: !GetAtt WorkerFunction.Arn
