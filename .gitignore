@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+.aws-sam/
+*.zip
+.env
+config_secret.json
