@@ -1,0 +1,52 @@
+{
+  "home": {
+    "n": 288,
+    "avg_gco2": 0.001261,
+    "total_gco2": 0.3631,
+    "avg_latency_ms": 875.44,
+    "p95_latency_ms": 944.21,
+    "cold_start_rate": 0.0069,
+    "cold_start_count": 2,
+    "region_distribution": {
+      "ap-south-1": 288
+    }
+  },
+  "round_robin": {
+    "n": 288,
+    "avg_gco2": 0.002329,
+    "total_gco2": 0.6708,
+    "avg_latency_ms": 1161.42,
+    "p95_latency_ms": 1456.91,
+    "cold_start_rate": 0.0278,
+    "cold_start_count": 8,
+    "region_distribution": {
+      "ap-south-1": 97,
+      "eu-north-1": 96,
+      "us-east-1": 95
+    }
+  },
+  "carbon_only": {
+    "n": 252,
+    "avg_gco2": 0.000348,
+    "total_gco2": 0.0876,
+    "avg_latency_ms": 1240.02,
+    "p95_latency_ms": 1304.75,
+    "cold_start_rate": 0.0159,
+    "cold_start_count": 4,
+    "region_distribution": {
+      "eu-north-1": 252
+    }
+  },
+  "multi_objective": {
+    "n": 144,
+    "avg_gco2": 0.00125,
+    "total_gco2": 0.18,
+    "avg_latency_ms": 875.21,
+    "p95_latency_ms": 940.67,
+    "cold_start_rate": 0.0069,
+    "cold_start_count": 1,
+    "region_distribution": {
+      "ap-south-1": 144
+    }
+  }
+}

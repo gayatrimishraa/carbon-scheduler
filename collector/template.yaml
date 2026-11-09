@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Carbon Intensity Collector
+
+Globals:
+  Function:
+    Runtime: python3.12
+    MemorySize: 128
+    Timeout: 30
+    Architectures: [x86_64]
+
+Resources:
+  CollectorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/carbon-collector
+      RetentionInDays: 1
+
+  CollectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: carbon-collector
+      Handler: app.lambda_handler
+      CodeUri: .
+      Environment:
+        Variables:
+          TABLE_NAME: carbon_live
+          SSM_PARAM:  /carbon-scheduler/live-mode
+      Events:
+        HourlyTrigger:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 hour)
+            Name: carbon-collector-hourly
+            Enabled: true
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: carbon_live
+        - SSMParameterReadPolicy:
+            ParameterName: carbon-scheduler/live-mode

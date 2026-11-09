@@ -1,0 +1,5 @@
+policy,n,avg_gco2,total_gco2,avg_latency_ms,p95_latency_ms,cold_start_rate,cold_start_count
+carbon_only,252,0.000348,0.0876,1240.02,1304.75,0.0159,4
+home,288,0.001261,0.3631,875.44,944.21,0.0069,2
+multi_objective,144,0.00125,0.18,875.21,940.67,0.0069,1
+round_robin,288,0.002329,0.6708,1161.42,1456.91,0.0278,8

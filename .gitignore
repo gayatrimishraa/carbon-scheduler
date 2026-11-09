@@ -4,3 +4,9 @@ __pycache__/
 *.zip
 .env
 config_secret.json
+
+.aws-sam/
+__pycache__/
+*.pyc
+response_collector.json
+C:/Temp/
