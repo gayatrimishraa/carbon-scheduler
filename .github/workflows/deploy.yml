@@ -75,7 +75,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: SAM Build
-        run: sam build --template-file template.yaml
+        run: sam build --template-file template.yaml --no-cached
 
       - name: SAM Deploy
         run: |
