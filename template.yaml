@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Carbon-Aware Serverless Scheduler — unified stack
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [production, staging]
+
+Globals:
+  Function:
+    Runtime: python3.11
+    MemorySize: 128
+    Timeout: 30
+    Architectures: [x86_64]
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        DYNAMODB_REGION: ap-south-1
+
+# ─────────────────────────────────────────
+# COLLECTOR
+# ─────────────────────────────────────────
+Resources:
+  CollectorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/carbon-collector
+      RetentionInDays: 1
+
+  CollectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: carbon-collector
+      Handler: app.lambda_handler
+      CodeUri: collector/
+      Environment:
+        Variables:
+          TABLE_NAME: carbon_live
+          SSM_PARAM: /carbon-scheduler/live-mode
+      Events:
+        HourlyTrigger:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 hour)
+            Name: carbon-collector-hourly
+            Enabled: true
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: carbon_live
+        - SSMParameterReadPolicy:
+            ParameterName: carbon-scheduler/live-mode
+
+# ─────────────────────────────────────────
+# ROUTER
+# ─────────────────────────────────────────
+  RouterLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/carbon-router
+      RetentionInDays: 1
+
+  RouterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: carbon-router
+      Handler: app.lambda_handler
+      CodeUri: router/
+      Role: arn:aws:iam::714437051269:role/carbon-router-role
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: ["*"]
+          AllowMethods: [POST]
+          AllowHeaders:
+            - content-type
+            - x-secret-token
+            - authorization
+          MaxAge: 300
+      Environment:
+        Variables:
+          SECRET_TOKEN: "scheduler-secret-2024"
+          WORKER_ARNS: '{"ap-south-1":"arn:aws:lambda:ap-south-1:714437051269:function:carbon-worker","eu-north-1":"arn:aws:lambda:eu-north-1:714437051269:function:carbon-worker","us-east-1":"arn:aws:lambda:us-east-1:714437051269:function:carbon-worker"}'
+
+# ─────────────────────────────────────────
+# WORKER
+# ─────────────────────────────────────────
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/carbon-worker
+      RetentionInDays: 1
+
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: carbon-worker
+      Handler: app.lambda_handler
+      CodeUri: worker/
+      Environment:
+        Variables:
+          PLACEHOLDER: "1"
+
+# ─────────────────────────────────────────
+# ML FORECAST LAMBDA
+# ─────────────────────────────────────────
+  MLLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/carbon-ml-forecast
+      RetentionInDays: 1
+
+  MLForecastFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: carbon-ml-forecast
+      Handler: predict.lambda_handler
+      CodeUri: ml/
+      MemorySize: 256
+      Timeout: 60
+      Environment:
+        Variables:
+          CARBON_TABLE: carbon_live
+          FORECAST_TABLE: region_state
+          DYNAMODB_REGION: ap-south-1
+      Events:
+        HourlyForecast:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 hour)
+            Name: carbon-ml-forecast-hourly
+            Enabled: true
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: carbon_live
+        - DynamoDBWritePolicy:
+            TableName: region_state
+
+# ─────────────────────────────────────────
+# OUTPUTS
+# ─────────────────────────────────────────
+Outputs:
+  RouterFunctionUrl:
+    Description: Router Function URL
+    Value: !GetAtt RouterFunctionUrl.FunctionUrl
+  RouterFunctionArn:
+    Description: Router Function ARN
+    Value: !GetAtt RouterFunction.Arn
+  MLForecastFunctionArn:
+    Description: ML Forecast Lambda ARN
+    Value: !GetAtt MLForecastFunction.Arn
+  WorkerFunctionArn:
+    Description: Worker Function ARN
+    Value: !GetAtt WorkerFunction.Arn
