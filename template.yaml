@@ -19,10 +19,11 @@ Globals:
         ENVIRONMENT: !Ref Environment
         DYNAMODB_REGION: ap-south-1
 
+Resources:
+
 # ─────────────────────────────────────────
 # COLLECTOR
 # ─────────────────────────────────────────
-Resources:
   CollectorLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -67,7 +68,6 @@ Resources:
       FunctionName: carbon-router
       Handler: app.lambda_handler
       CodeUri: router/
-      Role: arn:aws:iam::714437051269:role/carbon-router-role
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
@@ -82,6 +82,18 @@ Resources:
         Variables:
           SECRET_TOKEN: "scheduler-secret-2024"
           WORKER_ARNS: '{"ap-south-1":"arn:aws:lambda:ap-south-1:714437051269:function:carbon-worker","eu-north-1":"arn:aws:lambda:eu-north-1:714437051269:function:carbon-worker","us-east-1":"arn:aws:lambda:us-east-1:714437051269:function:carbon-worker"}'
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: carbon_live
+        - DynamoDBReadPolicy:
+            TableName: region_state
+        - Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource:
+                - arn:aws:lambda:ap-south-1:714437051269:function:carbon-worker
+                - arn:aws:lambda:eu-north-1:714437051269:function:carbon-worker
+                - arn:aws:lambda:us-east-1:714437051269:function:carbon-worker
 
 # ─────────────────────────────────────────
 # WORKER
