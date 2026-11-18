@@ -5,9 +5,41 @@ import os
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 
-# scikit-learn imports
-from sklearn.linear_model import Ridge
-from sklearn.preprocessing import StandardScaler
+# Pure NumPy implementations of StandardScaler and Ridge regression
+# Eliminates heavy scikit-learn and scipy dependencies for lightweight, reliable Lambda deployment
+class StandardScaler:
+    def __init__(self):
+        self.mean_ = None
+        self.scale_ = None
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        self.mean_ = np.mean(X, axis=0)
+        self.scale_ = np.std(X, axis=0)
+        self.scale_[self.scale_ == 0.0] = 1.0
+        return (X - self.mean_) / self.scale_
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        return (X - self.mean_) / self.scale_
+
+
+class Ridge:
+    def __init__(self, alpha: float = 1.0):
+        self.alpha = float(alpha)
+        self.coef_ = None
+        self.intercept_ = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        self.intercept_ = float(np.mean(y))
+        y_centered = y - self.intercept_
+        n_features = X.shape[1]
+        A = X.T @ X + self.alpha * np.eye(n_features)
+        b = X.T @ y_centered
+        self.coef_ = np.linalg.solve(A, b)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return (X @ self.coef_) + self.intercept_
+
 
 CARBON_TABLE = os.environ.get("CARBON_TABLE", "carbon_live")
 FORECAST_TABLE = os.environ.get("FORECAST_TABLE", "region_state")
@@ -178,4 +210,3 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     result = lambda_handler({}, None)
     print(json.dumps(json.loads(result["body"]), indent=2))
-    

@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: Carbon-Aware Serverless Scheduler — unified stack
 
@@ -20,10 +20,9 @@ Globals:
         DYNAMODB_REGION: ap-south-1
 
 Resources:
-
-# ─────────────────────────────────────────
-# COLLECTOR
-# ─────────────────────────────────────────
+  # ─────────────────────────────────────────
+  # COLLECTOR
+  # ─────────────────────────────────────────
   CollectorLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -53,9 +52,9 @@ Resources:
         - SSMParameterReadPolicy:
             ParameterName: carbon-scheduler/live-mode
 
-# ─────────────────────────────────────────
-# ROUTER
-# ─────────────────────────────────────────
+  # ─────────────────────────────────────────
+  # ROUTER
+  # ─────────────────────────────────────────
   RouterLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -76,6 +75,7 @@ Resources:
           AllowHeaders:
             - content-type
             - x-secret-token
+            - x-scheduler-token
             - authorization
           MaxAge: 300
       Environment:
@@ -95,9 +95,9 @@ Resources:
                 - arn:aws:lambda:eu-north-1:714437051269:function:carbon-worker
                 - arn:aws:lambda:us-east-1:714437051269:function:carbon-worker
 
-# ─────────────────────────────────────────
-# WORKER
-# ─────────────────────────────────────────
+  # ─────────────────────────────────────────
+  # WORKER (ap-south-1 only)
+  # ─────────────────────────────────────────
   WorkerLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -114,9 +114,9 @@ Resources:
         Variables:
           PLACEHOLDER: "1"
 
-# ─────────────────────────────────────────
-# ML FORECAST LAMBDA
-# ─────────────────────────────────────────
+  # ─────────────────────────────────────────
+  # ML FORECAST
+  # ─────────────────────────────────────────
   MLLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -149,13 +149,142 @@ Resources:
         - DynamoDBWritePolicy:
             TableName: region_state
 
-# ─────────────────────────────────────────
-# OUTPUTS
-# ─────────────────────────────────────────
+  # ─────────────────────────────────────────
+  # CLOUDWATCH DASHBOARD  ← FIXED: now under Resources
+  # ─────────────────────────────────────────
+  SchedulerDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: CarbonAwareScheduler
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "text",
+              "x": 0, "y": 0, "width": 24, "height": 1,
+              "properties": {
+                "markdown": "# 🌱 Carbon-Aware Serverless Scheduler — Live Dashboard"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 1, "width": 8, "height": 6,
+              "properties": {
+                "title": "Router Invocations",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "carbon-router", {"stat": "Sum", "period": 3600}]
+                ],
+                "view": "timeSeries",
+                "region": "ap-south-1",
+                "period": 3600
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8, "y": 1, "width": 8, "height": 6,
+              "properties": {
+                "title": "Router Errors",
+                "metrics": [
+                  ["AWS/Lambda", "Errors", "FunctionName", "carbon-router", {"stat": "Sum", "period": 3600, "color": "#d62728"}]
+                ],
+                "view": "timeSeries",
+                "region": "ap-south-1",
+                "period": 3600
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16, "y": 1, "width": 8, "height": 6,
+              "properties": {
+                "title": "Router Duration (ms)",
+                "metrics": [
+                  ["AWS/Lambda", "Duration", "FunctionName", "carbon-router", {"stat": "p99", "period": 3600, "label": "p99"}],
+                  ["AWS/Lambda", "Duration", "FunctionName", "carbon-router", {"stat": "Average", "period": 3600, "label": "avg"}]
+                ],
+                "view": "timeSeries",
+                "region": "ap-south-1",
+                "period": 3600
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 7, "width": 8, "height": 6,
+              "properties": {
+                "title": "Worker Invocations by Region",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "carbon-worker", {"stat": "Sum", "period": 3600, "region": "ap-south-1", "label": "Mumbai"}],
+                  ["AWS/Lambda", "Invocations", "FunctionName", "carbon-worker", {"stat": "Sum", "period": 3600, "region": "us-east-1", "label": "N. Virginia"}],
+                  ["AWS/Lambda", "Invocations", "FunctionName", "carbon-worker", {"stat": "Sum", "period": 3600, "region": "eu-north-1", "label": "Stockholm"}]
+                ],
+                "view": "timeSeries",
+                "region": "ap-south-1",
+                "period": 3600
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8, "y": 7, "width": 8, "height": 6,
+              "properties": {
+                "title": "ML Forecast Invocations",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "carbon-ml-forecast", {"stat": "Sum", "period": 3600}],
+                  ["AWS/Lambda", "Errors", "FunctionName", "carbon-ml-forecast", {"stat": "Sum", "period": 3600, "color": "#d62728"}]
+                ],
+                "view": "timeSeries",
+                "region": "ap-south-1",
+                "period": 3600
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16, "y": 7, "width": 8, "height": 6,
+              "properties": {
+                "title": "Collector Invocations",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "carbon-collector", {"stat": "Sum", "period": 3600}],
+                  ["AWS/Lambda", "Errors", "FunctionName", "carbon-collector", {"stat": "Sum", "period": 3600, "color": "#d62728"}]
+                ],
+                "view": "timeSeries",
+                "region": "ap-south-1",
+                "period": 3600
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 13, "width": 12, "height": 6,
+              "properties": {
+                "title": "Cold Starts Across All Functions",
+                "metrics": [
+                  ["AWS/Lambda", "InitDuration", "FunctionName", "carbon-router", {"stat": "Sum", "period": 3600, "label": "Router"}],
+                  ["AWS/Lambda", "InitDuration", "FunctionName", "carbon-ml-forecast", {"stat": "Sum", "period": 3600, "label": "ML Forecast"}],
+                  ["AWS/Lambda", "InitDuration", "FunctionName", "carbon-collector", {"stat": "Sum", "period": 3600, "label": "Collector"}]
+                ],
+                "view": "timeSeries",
+                "region": "ap-south-1",
+                "period": 3600
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 13, "width": 12, "height": 6,
+              "properties": {
+                "title": "Concurrent Executions",
+                "metrics": [
+                  ["AWS/Lambda", "ConcurrentExecutions", "FunctionName", "carbon-router", {"stat": "Maximum", "period": 3600}],
+                  ["AWS/Lambda", "ConcurrentExecutions", "FunctionName", "carbon-worker", {"stat": "Maximum", "period": 3600}]
+                ],
+                "view": "timeSeries",
+                "region": "ap-south-1",
+                "period": 3600
+              }
+            }
+          ]
+        }
+
 Outputs:
   RouterFunctionUrl:
     Description: Router Function URL
-    Value: !GetAtt RouterFunctionUrl.FunctionUrl
+    Value: !GetAtt RouterFunction.Arn
   RouterFunctionArn:
     Description: Router Function ARN
     Value: !GetAtt RouterFunction.Arn

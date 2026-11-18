@@ -5,9 +5,40 @@ without needing AWS credentials.
 Usage: python ml/train.py
 """
 import numpy as np
-from sklearn.linear_model import Ridge
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error, r2_score
+
+class StandardScaler:
+    def __init__(self):
+        self.mean_ = None
+        self.scale_ = None
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        self.mean_ = np.mean(X, axis=0)
+        self.scale_ = np.std(X, axis=0)
+        self.scale_[self.scale_ == 0.0] = 1.0
+        return (X - self.mean_) / self.scale_
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        return (X - self.mean_) / self.scale_
+
+
+class Ridge:
+    def __init__(self, alpha: float = 1.0):
+        self.alpha = float(alpha)
+        self.coef_ = None
+        self.intercept_ = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        self.intercept_ = float(np.mean(y))
+        y_centered = y - self.intercept_
+        n_features = X.shape[1]
+        A = X.T @ X + self.alpha * np.eye(n_features)
+        b = X.T @ y_centered
+        self.coef_ = np.linalg.solve(A, b)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return (X @ self.coef_) + self.intercept_
+
 
 REGION_PATTERNS = {
     "ap-south-1": [210,205,200,195,190,185,175,160,145,130,120,115,
@@ -45,8 +76,10 @@ for region, pattern in REGION_PATTERNS.items():
     model.fit(X_scaled, y_noisy)
 
     preds = model.predict(X_scaled)
-    mae = mean_absolute_error(y, preds)
-    r2 = r2_score(y, preds)
+    mae = float(np.mean(np.abs(y - preds)))
+    ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+    ss_res = float(np.sum((y - preds) ** 2))
+    r2 = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
 
     print(f"\nRegion: {region}")
     print(f"  MAE : {mae:.2f} gCO2/kWh")
