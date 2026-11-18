@@ -2919,7 +2919,7 @@
 
       document.getElementById("resLatency").innerText = `${data.latency_ms} ms`;
       document.getElementById("resWallTime").innerText = `Client Wall: ${clientWallMs} ms`;
-      document.getElementById("resCO2").innerText = `${data.est_gco2} g`;
+      document.getElementById("resCO2").innerText = `${(data.estimated_gco2 || 0).toFixed(8)} g`;
       document.getElementById("resCarbonIntensity").innerText = `${data.carbon_intensity} gCO2/kWh`;
 
       const coldEl = document.getElementById("resColdStart");
